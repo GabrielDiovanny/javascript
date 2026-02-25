@@ -6,26 +6,22 @@
     <title>Document</title>
 </head>
 <body>
-    <h1>Somando valores</h1>
-    <input type="number" name="txt1" id="txt"> +
-    <input type="number" name="txt2" id="txt2">
+    <h1>Digite sua velocidade</h1>
+    <input type="number" name="txt1" id="txt">
     <input type="button" value="Somar" onclick="somar()">
     <div id="res">Resultado</div>
     
 <script>
   function somar() {
     let tn1 = document.getElementById('txt')
-    let tn2 = document.getElementById('txt2')
     let res = document.getElementById('res')
 
     let n1 = Number(tn1.value)
-    let n2 = Number(tn2.value)
-    let s = n1 % n2
-    if (s==0) {
-        res.innerHTML = `Par`
+    if (n1 > 75) {
+        res.innerHTML = `Você foi multado por eceder o limite de volocidade`
     }
     else {
-        res.innerHTML = `Impar`
+        res.innerHTML = `Você está dendo do limite de velocidade`
     }
   }
 </script>

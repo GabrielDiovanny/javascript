@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Three.js EXTREMO</title>
+  <style>
+    html, body { margin:0; height:100%; overflow:hidden; background:#0b0e14; }
+    #hint{
+      position:fixed; left:12px; top:12px; z-index:10;
+      color:#d6d6d6; font:14px system-ui; opacity:.9;
+      background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.08);
+      padding:10px 12px; border-radius:12px; backdrop-filter: blur(8px);
+    }
+    #hint b{ color:#fff; }
+  </style>
+
+  <!-- Importmap: tudo em ES Modules, sem dor -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="hint">
+    <b>Mouse:</b> arrastar gira • scroll zoom • <b>hover</b> destaca • <b>clique</b> muda cor<br>
+    <b>GUI:</b> canto direito • <b>FPS</b> canto esquerdo
+  </div>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+    import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+    import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+    import Stats from "three/addons/libs/stats.module.js";
+    import { GUI } from "three/addons/libs/lil-gui.module.min.js";
+
+    // ---------- Renderer ----------
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    document.body.appendChild(renderer.domElement);
+
+    // ---------- Scene / Camera ----------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0e14);
+    scene.fog = new THREE.Fog(0x0b0e14, 8, 30);
+
+    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 200);
+    camera.position.set(3.2, 2.1, 4.2);
+
+    // ---------- Controls ----------
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = false;
+    controls.minDistance = 2.2;
+    controls.maxDistance = 12;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.9;
+
+    // ---------- Lights ----------
+    const ambient = new THREE.AmbientLight(0xffffff, 0.35);
+    scene.add(ambient);
+
+    const key = new THREE.DirectionalLight(0xffffff, 1.35);
+    key.position.set(4, 6, 3);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.near = 0.5;
+    key.shadow.camera.far = 30;
+    key.shadow.camera.left = -8;
+    key.shadow.camera.right = 8;
+    key.shadow.camera.top = 8;
+    key.shadow.camera.bottom = -8;
+    scene.add(key);
+
+    const rim = new THREE.PointLight(0x6aa7ff, 1.1, 20);
+    rim.position.set(-4, 1.5, -2);
+    scene.add(rim);
+
+    const fill = new THREE.PointLight(0xff7b6a, 0.55, 18);
+    fill.position.set(2.5, 1.2, -4);
+    scene.add(fill);
+
+    // ---------- Floor ----------
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0d12,
+      roughness: 0.9,
+      metalness: 0.0
+    });
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -1.2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const grid = new THREE.GridHelper(40, 80, 0x223045, 0x131a28);
+    grid.position.y = -1.2 + 0.001;
+    grid.material.opacity = 0.35;
+    grid.material.transparent = true;
+    scene.add(grid);
+
+    // ---------- Main object ----------
+    const mainGeo = new THREE.TorusKnotGeometry(0.85, 0.26, 320, 28);
+    const mainMat = new THREE.MeshStandardMaterial({
+      color: 0x00ff9a,
+      metalness: 0.75,
+      roughness: 0.18,
+      emissive: 0x062116,
+      emissiveIntensity: 0.35
+    });
+    const main = new THREE.Mesh(mainGeo, mainMat);
+    main.castShadow = true;
+    main.position.y = 0.1;
+    scene.add(main);
+
+    // Pedestal (só pra ficar “premium”)
+    const ped = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.85, 1.05, 0.25, 48),
+      new THREE.MeshStandardMaterial({ color: 0x0f1320, roughness: 0.6, metalness: 0.15 })
+    );
+    ped.position.y = -0.95;
+    ped.receiveShadow = true;
+    ped.castShadow = true;
+    scene.add(ped);
+
+    // ---------- Stars / Particles ----------
+    const starCount = 1200;
+    const starGeo = new THREE.BufferGeometry();
+    const starPos = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const r = 22 * Math.random();
+      const theta = Math.random() * Math.PI * 2;
+      const y = (Math.random() - 0.5) * 14;
+      starPos[i * 3 + 0] = Math.cos(theta) * r;
+      starPos[i * 3 + 1] = y;
+      starPos[i * 3 + 2] = Math.sin(theta) * r;
+    }
+    starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
+    const stars = new THREE.Points(
+      starGeo,
+      new THREE.PointsMaterial({ size: 0.03, transparent: true, opacity: 0.8 })
+    );
+    scene.add(stars);
+
+    // ---------- Raycaster hover/click ----------
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let hovered = false;
+    const originalEmissive = mainMat.emissive.clone();
+    const originalColor = mainMat.color.clone();
+
+    function onPointerMove(e) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+    }
+    addEventListener("pointermove", onPointerMove);
+
+    function randomColor() {
+      const c = new THREE.Color().setHSL(Math.random(), 0.85, 0.55);
+      return c;
+    }
+
+    let pulse = 0;
+    addEventListener("click", () => {
+      // só reage se estiver em cima do objeto
+      raycaster.setFromCamera(mouse, camera);
+      const hit = raycaster.intersectObject(main, false);
+      if (!hit.length) return;
+
+      const c = randomColor();
+      mainMat.color.copy(c);
+      mainMat.emissive.copy(c).multiplyScalar(0.25);
+      pulse = 1.0;
+    });
+
+    // ---------- Postprocessing (Bloom) ----------
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(innerWidth, innerHeight),
+      0.55, // strength
+      0.5,  // radius
+      0.25  // threshold
+    );
+    composer.addPass(bloom);
+
+    // ---------- FPS ----------
+    const stats = new Stats();
+    stats.showPanel(0);
+    document.body.appendChild(stats.dom);
+
+    // ---------- GUI ----------
+    const gui = new GUI({ width: 320 });
+    const params = {
+      autoRotate: true,
+      exposure: 1.05,
+      bloomStrength: 0.55,
+      bloomRadius: 0.5,
+      bloomThreshold: 0.25,
+      metalness: mainMat.metalness,
+      roughness: mainMat.roughness
+    };
+
+    gui.add(params, "autoRotate").onChange(v => controls.autoRotate = v);
+    gui.add(params, "exposure", 0.6, 1.8, 0.01).onChange(v => renderer.toneMappingExposure = v);
+
+    const f1 = gui.addFolder("Bloom");
+    f1.add(params, "bloomStrength", 0, 2, 0.01).onChange(v => bloom.strength = v);
+    f1.add(params, "bloomRadius", 0, 1, 0.01).onChange(v => bloom.radius = v);
+    f1.add(params, "bloomThreshold", 0, 1, 0.01).onChange(v => bloom.threshold = v);
+    f1.open();
+
+    const f2 = gui.addFolder("Material");
+    f2.add(params, "metalness", 0, 1, 0.01).onChange(v => mainMat.metalness = v);
+    f2.add(params, "roughness", 0, 1, 0.01).onChange(v => mainMat.roughness = v);
+    f2.open();
+
+    // ---------- Resize ----------
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      composer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    // ---------- Loop ----------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      stats.begin();
+
+      const dt = clock.getDelta();
+      const t = clock.elapsedTime;
+
+      // giro base do objeto
+      main.rotation.y += dt * 0.8;
+      main.rotation.x += dt * 0.35;
+
+      // brilho “respirando” (quando clica vira pulse)
+      if (pulse > 0) {
+        pulse = Math.max(0, pulse - dt * 1.8);
+        const s = 1 + pulse * 0.18;
+        main.scale.setScalar(s);
+      } else {
+        main.scale.setScalar(1);
+      }
+
+      // estrelas girando bem leve (ambiente vivo)
+      stars.rotation.y = t * 0.02;
+
+      // hover highlight
+      raycaster.setFromCamera(mouse, camera);
+      const hit = raycaster.intersectObject(main, false);
+
+      if (hit.length && !hovered) {
+        hovered = true;
+        mainMat.emissive.copy(originalEmissive).add(new THREE.Color(0x083a2a));
+        bloom.strength += 0.15;
+        document.body.style.cursor = "pointer";
+      }
+      if (!hit.length && hovered) {
+        hovered = false;
+        mainMat.emissive.copy(new THREE.Color(mainMat.color).multiplyScalar(0.25));
+        bloom.strength = params.bloomStrength;
+        document.body.style.cursor = "default";
+      }
+
+      controls.update();
+      composer.render();
+
+      stats.end();
+      requestAnimationFrame(animate);
+    }
+
+    // seta estado inicial
+    controls.autoRotate = params.autoRotate;
+    animate();
+  </script>
+</body>
+</html>
