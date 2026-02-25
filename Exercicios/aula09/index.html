@@ -20,13 +20,14 @@
     </style>
   </head>
   <body>
-    <h1>Iniciando estudos em DOM</h1>
-    <p>aqui vai o resultado</p>
+    <h1 class="ola">Iniciando estudos em DOM</h1>
+    <p class="">aqui vai o resultado</p>
     <p>aprendendo a usar o<strong>DOM</strong>em JavaScript </p>
     <div>clique em mim</div>
 
     <script>
-        window.document.write(window.document.URL)
+        let p1 = document.getElementsByClassName('ola')[0]
+        window.document.write(p1.innerText)
     </script>
 
 
