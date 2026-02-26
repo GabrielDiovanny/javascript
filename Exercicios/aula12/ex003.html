@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>Digite sua velocidade</h1>
+    <input type="number" name="txt1" id="txt" />
+    <input type="button" value="Somar" onclick="somar()">
+    <div id="res">Resultado</div>
+
+    <script>
+      function somar() {
+        let tn1 = document.getElementById('txt')
+        let res = document.getElementById('res')
+
+        let n1 = Number(tn1.value)
+
+          switch (n1) {
+            case 0:
+              res.innerHTML = "Domingo";
+              break;
+
+            case 1:
+              res.innerHTML = "Segunda";
+              break;
+
+            case 2:
+              res.innerHTML = "Terça";
+              break;
+
+            case 3:
+              res.innerHTML = "Quarta";
+              break;
+
+            case 4:
+              res.innerHTML = "Quinta";
+              break;
+
+            case 5:
+              res.innerHTML = "Sexta";
+              break;
+
+            case 6:
+              res.innerHTML = "Sabado";
+              break;
+          }
+        }
+    </script>
+  </body>
+</html>

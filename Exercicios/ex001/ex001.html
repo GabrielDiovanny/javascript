@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+
+        body {
+            background-color: rgba(255, 255, 0, 0.404);
+            text-align: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        #foto img {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+        }
+
+        section {
+            background-color: white;
+            border-radius: 30px;
+            width: 500px;
+            margin: 0 auto;
+            font-size: 30px;
+        }
+
+        section p {
+            font-size: 30px;
+        }
+
+        p {
+            font-size: 30px;
+        }
+    </style>
+  </head>
+  <body onload= "carregar()" >
+    <header>
+      <h1>Hora do dia</h1>
+    </header>
+    <section>
+      <div id="msg">
+       <p>Aqui vai aparecer a mensagem</p>
+      </div>
+      <div id="foto">
+        <img src="img/wallhaven-ogyeol.jpg" alt="" />
+      </div>
+    </section>
+    <footer>
+        <p>Curso em video</p>
+    </footer>
+
+    <script>
+      function carregar() {
+
+        let foto = document.getElementById("foto");
+        let data = new Date()
+        let hora = data.getDay()
+
+        msg.innerHTML = `Agora sao ${hora}`
+      }
+    </script>
+  </body>
+</html>
